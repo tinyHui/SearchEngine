@@ -1,0 +1,28 @@
+{% load staticfiles %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Search Engine</title>
+
+    <link rel="stylesheet" href="{% static "css/base.css" %}">
+    <link rel="stylesheet" href="{% static "css/pure-min.css" %}">
+</head>
+<body>
+    <div class="title-main">
+        <h1>Search Engine</h1>
+    </div>
+
+    <div class="pure-form">
+        <form action="" method="GET">
+            <input type="text" name="q" class="pure-input-1-2">
+            <input type="submit" value="search" class="pure-button pure-button-primary"/>
+        </form>
+    </div>
+
+    <div>
+        <p>This is the result page.</p>
+    </div>
+</body>
+</html>
