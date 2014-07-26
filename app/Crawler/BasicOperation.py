@@ -1,5 +1,7 @@
-from time import sleep as sleepSecond
 from config import HEADER, OKBLUE, OKGREEN, FAIL, WARNING, ENDC, HTTP_RESPONSE_ERROR, LOG_FILE
+from urllib3.util.url import parse_url as parseURL
+from urllib.parse import urljoin
+from time import sleep as sleepSecond
 import os
 
 # SYS
@@ -32,20 +34,28 @@ def logRecord(state, hint, msg):
 def save(*, data, filename, dir=None):
     if dir is not None:
         filename = os.path.join(dir, filename)
+    print(filename)
+    return filename
 
-    if data is None or filename is None:
-        return
+    # try:
+    #     with open(filename, 'wb') as f:
+    #         f.write(data)
+    # except FileNotFoundError as e:
+    #     dir = os.path.split(filename)[0]
+    #     printFail(hint='Try create folder', msg=dir)
+    #     os.mkdir(dir)
+    #     with open(filename, 'wb') as f:
+    #         f.write(data)
+    # f.close()
+    # return filename
 
-    try:
-        with open(filename, 'wb') as f:
-            f.write(data)
-    except FileNotFoundError as e:
-        dir = os.path.split(filename)[0]
-        printFail(hint='Try create folder', msg=dir)
-        os.mkdir(dir)
-        with open(filename, 'wb') as f:
-            f.write(data)
-    f.close()
+def read(filename):
+    if not os.path.isfile(filename):
+        return None
+    with open(filename, 'r') as f:
+        content = f.read()
+    return content
+
 
 # HTTP connection
 def isNormalConn(status):
@@ -64,4 +74,10 @@ def getFileNameInURL(url):
     if url is None or url == '':
         url = 'index.html'
 
+    return url
+
+def getBaseURL(url):
+    parse_url = parseURL(url)
+    url = parse_url.scheme + '://' + parse_url.host
+    url = urljoin(url, '/blogs/')
     return url

@@ -1,5 +1,5 @@
 from BasicOperation import sleep, printState, printSuccess, printFail, isNormalConn, save, getFileNameInURL
-from config import DOWNLOAD_DIR, DOWNLOAD_RESULT, URL_LIST, REDOWNLOAD_TIME, URL_INPUT_TIMEOUT
+from config import DOWNLOAD_DIR, DOWNLOAD_RESULT, URL_DOWNLOAD_LIST, URL_VISITED_LIST, URL_VISITED_FILE_LIST, REDOWNLOAD_TIME, URL_NEW_DOWNLOAD_TIMEOUT
 from threading import Thread
 from urllib3.util.timeout import Timeout
 from urllib3.util.url import parse_url as parseURL
@@ -10,7 +10,7 @@ import certifi
 
 class Downloader(Thread):
     """docstring for Downloader"""
-    def __init__(self, *, interval=1000, thread_num=None):
+    def __init__(self, *, interval=100, thread_num=None):
         super(Downloader, self).__init__()
         self.thread_num = thread_num + 1
         self.thread_stop = False
@@ -23,7 +23,7 @@ class Downloader(Thread):
         
         while not self.thread_stop:
             try:
-                self.url = URL_LIST.get(timeout=URL_INPUT_TIMEOUT)
+                self.url = URL_DOWNLOAD_LIST.get(timeout=URL_NEW_DOWNLOAD_TIMEOUT)
             except QueueEmpty as e:
                 printSuccess(hint="Thread-%d Destoried cause of No URL left." % (self.thread_num))
                 return
@@ -83,9 +83,11 @@ class Downloader(Thread):
         ##################### Start Save Web Page #####################
 
         if isNormalConn(r.status):
-            save(data=r.data,filename=filename, dir=DOWNLOAD_DIR)
+            file_name = save(data=r.data,filename=filename, dir=DOWNLOAD_DIR)
+            URL_VISITED_FILE_LIST.put(file_name)
 
-        printSuccess(hint="Finish Do", msg=self.url)
+        URL_VISITED_LIST.append(self.url)
+        printSuccess(hint="Finish", msg=self.url)
         self.url = None
         self.fail_time = 0
         return DOWNLOAD_RESULT['SUCCESS']
