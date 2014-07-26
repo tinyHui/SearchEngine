@@ -34,20 +34,18 @@ def logRecord(state, hint, msg):
 def save(*, data, filename, dir=None):
     if dir is not None:
         filename = os.path.join(dir, filename)
-    print(filename)
-    return filename
 
-    # try:
-    #     with open(filename, 'wb') as f:
-    #         f.write(data)
-    # except FileNotFoundError as e:
-    #     dir = os.path.split(filename)[0]
-    #     printFail(hint='Try create folder', msg=dir)
-    #     os.mkdir(dir)
-    #     with open(filename, 'wb') as f:
-    #         f.write(data)
-    # f.close()
-    # return filename
+    try:
+        with open(filename, 'wb') as f:
+            f.write(data)
+    except FileNotFoundError as e:
+        dir = os.path.dirname(filename)
+        printFail(hint='Try create folder', msg=dir)
+        os.makedirs(dir)
+        with open(filename, 'wb') as f:
+            f.write(data)
+    f.close()
+    return filename
 
 def read(filename):
     if not os.path.isfile(filename):
@@ -68,16 +66,17 @@ def isNormalConn(status):
     return True
 
 def getFileNameInURL(url):
-    if url[0] == '/':
-        url = url[1:]
+    if url[-1] == '/':
+        name = 'index.html'
 
-    if url is None or url == '':
-        url = 'index.html'
-
-    return url
+    return name
 
 def getBaseURL(url):
-    parse_url = parseURL(url)
-    url = parse_url.scheme + '://' + parse_url.host
-    url = urljoin(url, '/blogs/')
-    return url
+    try:
+        parse_url = parseURL(url)
+        url = parse_url.scheme + '://' + parse_url.host
+        url = urljoin(url, '/blogs/')
+        return url
+    except TypeError as e:
+        printFail(hint="None Type", msg="url is %s" % url)
+        return ""

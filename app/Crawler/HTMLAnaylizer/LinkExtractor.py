@@ -35,7 +35,8 @@ class LinkExtractor(Thread):
                     link = urljoin(self.base_url, link)
 
                 if link[0] != "#" and \
-                   link != "javascript:;":
+                   link != "javascript:;" and \
+                   link[0:6] != "mailto:":
                    link_base_url = getBaseURL(link)
                    if link_base_url == self.base_url:
                         URL_DOWNLOAD_LIST.put(link)
