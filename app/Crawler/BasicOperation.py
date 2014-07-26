@@ -28,7 +28,7 @@ def save(*, data, filename, dir=None):
     try:
         with open(filename, 'wb') as f:
             f.write(data)
-    except FileNotFoundError:
+    except FileNotFoundError as e:
         dir = os.path.split(filename)[0]
         printFail(hint='Try create folder', msg=dir)
         os.mkdir(dir)
@@ -45,4 +45,8 @@ def isNormalConn(status):
 def getFileNameInURL(url):
     if url[0] == '/':
         url = url[1:]
+
+    if url is None or url == '':
+        url = 'index.html'
+
     return url
