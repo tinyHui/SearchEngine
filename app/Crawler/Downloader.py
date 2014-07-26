@@ -85,7 +85,7 @@ class Downloader(Thread):
         if isNormalConn(r.status):
             save(data=r.data,filename=filename, dir=DOWNLOAD_DIR)
 
-        printSuccess(hint="Finish", msg=self.url)
+        printSuccess(hint="Finish Do", msg=self.url)
         self.url = None
         self.fail_time = 0
         return DOWNLOAD_RESULT['SUCCESS']

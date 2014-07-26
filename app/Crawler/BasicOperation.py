@@ -1,5 +1,5 @@
 from time import sleep as sleepSecond
-from config import HEADER, OKBLUE, OKGREEN, FAIL, WARNING, ENDC, HTTP_RESPONSE_ERROR
+from config import HEADER, OKBLUE, OKGREEN, FAIL, WARNING, ENDC, HTTP_RESPONSE_ERROR, LOG_FILE
 import os
 
 # SYS
@@ -9,13 +9,24 @@ def sleep(seconds):
 
 # print message
 def printState(*, hint='', msg=''):
+    logRecord("State\t", hint, msg)
     print(HEADER, hint, ENDC, msg)
 
 def printSuccess(*, hint='', msg=''):
+    logRecord("Success\t", hint, msg)
     print(OKGREEN, hint, ENDC, msg)
 
 def printFail(*, hint='', msg=''):
+    logRecord("Fail\t", hint, msg)
     print(FAIL, hint, ENDC, msg)
+
+def logRecord(state, hint, msg):
+    with open(LOG_FILE, 'a') as f:
+        if msg == '':
+            f.write("%s%s\n" % (state, hint))
+        else:
+            f.write("%s%s: %s\n" % (state, hint, msg))
+    f.close()
 
 # files
 def save(*, data, filename, dir=None):
@@ -34,7 +45,7 @@ def save(*, data, filename, dir=None):
         os.mkdir(dir)
         with open(filename, 'wb') as f:
             f.write(data)
-
+    f.close()
 
 # HTTP connection
 def isNormalConn(status):
