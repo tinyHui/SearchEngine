@@ -1,5 +1,5 @@
 from time import sleep as sleepSecond
-from config import HEADER, OKBLUE, OKGREEN, FAIL, WARNING, ENDC
+from config import HEADER, OKBLUE, OKGREEN, FAIL, WARNING, ENDC, HTTP_RESPONSE_ERROR
 import os
 
 # SYS
@@ -8,13 +8,13 @@ def sleep(seconds):
 
 
 # print message
-def printState(*, hint=None, msg=None):
+def printState(*, hint='', msg=''):
     print(HEADER, hint, ENDC, msg)
 
-def printSuccess(*, hint=None, msg=None):
+def printSuccess(*, hint='', msg=''):
     print(OKGREEN, hint, ENDC, msg)
 
-def printFail(*, hint=None, msg=None):
+def printFail(*, hint='', msg=''):
     print(FAIL, hint, ENDC, msg)
 
 # files
@@ -39,6 +39,10 @@ def save(*, data, filename, dir=None):
 # HTTP connection
 def isNormalConn(status):
     if status != 200 and status/100 != 3:
+        try:
+            printFail(hint="Connection Fail", msg=HTTP_RESPONSE_ERROR[status])
+        except KeyError as e:
+            printFail(hint="Connection Fail", msg=e)
         return False
     return True
 
