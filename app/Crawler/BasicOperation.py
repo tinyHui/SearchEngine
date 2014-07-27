@@ -3,6 +3,7 @@ from urllib3.util.url import parse_url as parseURL
 from urllib.parse import urljoin
 from time import sleep as sleepSecond
 import os
+import re
 
 # SYS
 def sleep(seconds):
@@ -45,6 +46,7 @@ def save(*, data, filename, dir=None):
         with open(filename, 'wb') as f:
             f.write(data)
     f.close()
+    printSuccess(hint="Saved", msg=filename)
     return filename
 
 def read(filename):
@@ -65,18 +67,39 @@ def isNormalConn(status):
         return False
     return True
 
-def getFileNameInURL(url):
-    if url[-1] == '/':
-        name = 'index.html'
-
-    return name
+def getFileInURL(url):
+    urls = parseURL(url).path.split('/')
+    urls = list(filter(lambda x: x!='', urls))  # remove '' items
+    try:
+        url = urls[-1]
+    except IndexError as e:
+        # domain only
+        return ('index.html', 'html')
+    pattern = r'^([\W\w]+)\.([\W\w]+)$'
+    m = re.match(pattern, url)
+    if m:
+        # file full name and file ext name
+        return (m.groups(0), m.groups(2))
+    else:
+        url = '/'.join(urls)
+        return (url + '/' + 'index.html', 'html')
 
 def getBaseURL(url):
     try:
         parse_url = parseURL(url)
         url = parse_url.scheme + '://' + parse_url.host
-        url = urljoin(url, '/blogs/')
         return url
     except TypeError as e:
         printFail(hint="None Type", msg="url is %s" % url)
         return ""
+
+def genFullURL(base_url, url):
+    pattern = r'^\/?([\W\w]*)\/?#[\W\w]*?$'
+    m = re.match(pattern, url)
+    url = urljoin(base_url, url)
+    return url
+
+def isValuableURL(url):
+    pattern = r'(^#[\W\w]*$)|(^mailto:[\W\w]*$)|(^news:[\W\w]*$)|(^javascript:[\W\w]*;?$)|(^\/$)'
+    m = re.match(pattern, url)
+    return not m

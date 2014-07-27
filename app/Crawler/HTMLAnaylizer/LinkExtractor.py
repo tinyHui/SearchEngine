@@ -1,9 +1,8 @@
 from config import URL_DOWNLOAD_LIST, URL_VISITED_FILE_LIST, URL_NEW_EXTRACT_TIMEOUT
-from BasicOperation import printSuccess, printFail, read, getBaseURL
+from BasicOperation import printState, printSuccess, printFail, read, getBaseURL, genFullURL, isValuableURL
 from bs4 import BeautifulSoup
 from threading import Thread
 from queue import Empty as QueueEmpty
-from urllib.parse import urljoin
 
 class LinkExtractor(Thread):
     """docstring for LinkExtractor"""
@@ -30,13 +29,17 @@ class LinkExtractor(Thread):
                 continue
 
             for link_tag in self.soup.find_all('a'):
-                link = link_tag.get('href')
-                if link[0] == '/':
-                    link = urljoin(self.base_url, link)
+                link = link_tag.get('href').strip()
 
-                if link[0] != "#" and \
-                   link != "javascript:;" and \
-                   link[0:6] != "mailto:":
-                   link_base_url = getBaseURL(link)
-                   if link_base_url == self.base_url:
+                # link is None or empty string
+                if link is None or link == "":
+                    continue
+
+                # link is valuable link
+                if isValuableURL(link):
+                    link = genFullURL(self.base_url, link)
+                    # link is in the same domine
+                    if self.base_url == getBaseURL(link):
                         URL_DOWNLOAD_LIST.put(link)
+
+                continue

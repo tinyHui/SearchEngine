@@ -1,4 +1,4 @@
-from BasicOperation import sleep, printState, printSuccess, printFail, isNormalConn, save, getFileNameInURL
+from BasicOperation import sleep, printState, printSuccess, printFail, isNormalConn, save, getFileInURL
 from config import DOWNLOAD_DIR, DOWNLOAD_RESULT, URL_DOWNLOAD_LIST, URL_VISITED_LIST, URL_VISITED_FILE_LIST, REDOWNLOAD_TIME, URL_NEW_DOWNLOAD_TIMEOUT
 from threading import Thread
 from urllib3.util.timeout import Timeout
@@ -55,7 +55,7 @@ class Downloader(Thread):
         printState(hint="Connecting", msg=self.url)
         parse_url = parseURL(self.url)
         scheme = parse_url.scheme
-        filename = getFileNameInURL(parse_url.path)
+        (filename, filetype) = getFileInURL(parse_url.path)
 
         timeout = Timeout(connect=2., read=7.)
         if scheme.lower() is 'https':

@@ -13,8 +13,10 @@ if __name__ == '__main__':
     thread_pool_download = []
     for i in range(DOWLOAD_THREAD_POOL_SIZE):
         new_thread_download = Downloader(thread_num=i)
-        new_thread_download.start()
         thread_pool_download.append(new_thread_download)
+    
+    for i in range(DOWLOAD_THREAD_POOL_SIZE):
+        thread_pool_download[i].start()
 
     thread_link_extract = LinkExtractor(base_url=base_url)
     thread_link_extract.start()
