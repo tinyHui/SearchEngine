@@ -13,15 +13,15 @@ def sleep(seconds):
 # print message
 def printState(*, hint='', msg=''):
     logRecord("State\t", hint, msg)
-    print(HEADER, hint, ENDC, msg)
+    # print(HEADER, hint, ENDC, msg)
 
 def printSuccess(*, hint='', msg=''):
     logRecord("Success\t", hint, msg)
-    print(OKGREEN, hint, ENDC, msg)
+    # print(OKGREEN, hint, ENDC, msg)
 
 def printFail(*, hint='', msg=''):
     logRecord("Fail\t", hint, msg)
-    print(FAIL, hint, ENDC, msg)
+    # print(FAIL, hint, ENDC, msg)
 
 def logRecord(state, hint, msg):
     with open(LOG_FILE, 'a') as f:
@@ -33,8 +33,9 @@ def logRecord(state, hint, msg):
 
 # files
 def save(*, data, filename, dir=None):
-    if dir is not None:
+    if dir is not None or filename is not None:
         filename = os.path.join(dir, filename)
+
 
     try:
         with open(filename, 'wb') as f:

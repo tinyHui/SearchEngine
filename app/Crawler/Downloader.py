@@ -51,7 +51,6 @@ class Downloader(Thread):
             return DOWNLOAD_RESULT['FAIL']
 
         ##################### Start Download Web Page #####################
-        
         printState(hint="Connecting", msg=self.url)
         parse_url = parseURL(self.url)
         scheme = parse_url.scheme
@@ -77,13 +76,15 @@ class Downloader(Thread):
         except MaxRetryError as e:
             printFail(hint="Resolve Error", msg=self.url)
             return DOWNLOAD_RESULT['FAIL']
-
         ##################### End #####################
 
         ##################### Start Save Web Page #####################
-
         if isNormalConn(r.status):
-            file_name = save(data=r.data,filename=filename, dir=DOWNLOAD_DIR)
+            try:
+                file_name = save(data=r.data,filename=filename, dir=DOWNLOAD_DIR)
+            except AttributeError as e:
+                printFail(hint="Save file fail in", msg=self.url)
+                return DOWNLOAD_RESULT['FAIL']
             URL_VISITED_FILE_LIST.put(file_name)
 
         URL_VISITED_LIST.append(self.url)
@@ -91,5 +92,4 @@ class Downloader(Thread):
         self.url = None
         self.fail_time = 0
         return DOWNLOAD_RESULT['SUCCESS']
-
         ##################### End #####################

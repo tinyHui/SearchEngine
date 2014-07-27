@@ -28,5 +28,5 @@ if __name__ == '__main__':
         thread_pool_download[i].start()
 
     for i in range(ANAYLIZER_THREAD_POOL_SIZE):
-        thread_pool_link_extract[1].start()
+        thread_pool_link_extract[i].start()
     ##################### End #####################
