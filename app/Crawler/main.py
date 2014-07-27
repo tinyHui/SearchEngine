@@ -11,6 +11,7 @@ if __name__ == '__main__':
     # begin start multi threads
     URL_DOWNLOAD_LIST.put(start_url)
     thread_pool_download = []
+    thread_pool_link_extract = []
 
     ##################### create threads #####################
     for i in range(DOWLOAD_THREAD_POOL_SIZE):
@@ -19,6 +20,7 @@ if __name__ == '__main__':
 
     for i in range(ANAYLIZER_THREAD_POOL_SIZE):
         new_link_extractor = LinkExtractor(base_url=base_url)
+        thread_pool_link_extract.append(new_link_extractor)
     ##################### End #####################
 
     ##################### start threads #####################
@@ -26,5 +28,5 @@ if __name__ == '__main__':
         thread_pool_download[i].start()
 
     for i in range(ANAYLIZER_THREAD_POOL_SIZE):
-        thread_link_extract.start()
+        thread_pool_link_extract[1].start()
     ##################### End #####################
