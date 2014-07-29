@@ -1,3 +1,8 @@
 from django.contrib import admin
+from Pages.models import LinkList
 
-# Register your models here.
+class LinkListAdmin(admin.ModelAdmin):
+    list_display = ('title',)
+    ordering = ('title',)
+
+admin.site.register(LinkList, LinkListAdmin)

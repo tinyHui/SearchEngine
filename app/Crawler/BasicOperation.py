@@ -36,7 +36,6 @@ def save(*, data, filename, dir=None):
     if dir is not None or filename is not None:
         filename = os.path.join(dir, filename)
 
-
     try:
         with open(filename, 'wb') as f:
             f.write(data)
