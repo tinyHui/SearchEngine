@@ -1,0 +1,6 @@
+# ignore compiled python
+*.pyc
+
+# ignore downloaded web pages
+WebPages
+./WebPages/*
