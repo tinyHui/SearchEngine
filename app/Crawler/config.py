@@ -5,6 +5,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(__file__))
 DOWNLOAD_DIR = os.path.join(os.path.dirname(BASE_DIR), 'WebPages')
 HISTORY_FILE = os.path.join(DOWNLOAD_DIR, 'record.his')
 LOG_FILE = os.path.join(DOWNLOAD_DIR, 'process.log')
+DATABASE = os.path.join(BASE_DIR, 'data.db')
 
 HEADER = '\033[95m'
 OKBLUE = '\033[94m'
