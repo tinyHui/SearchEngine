@@ -56,11 +56,13 @@ class Downloader(Thread):
         scheme = parse_url.scheme
         (filename, filetype) = getFileInURL(parse_url.path)
 
+        # headers = {"User-Agent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.153 Safari/537.36"}
         timeout = Timeout(connect=2., read=7.)
         if scheme.lower() is 'https':
             http = PoolManager(
                 cert_reqs='CERT_REQUIRED', 
                 ca_certs=certifi.where(),
+                # headers=headers,
                 timeout=timeout
             )
         else:
@@ -81,7 +83,7 @@ class Downloader(Thread):
         ##################### Start Save Web Page #####################
         # is not a HTML page
         if r.headers['Content-Type'].split(';')[0] != 'text/html':
-            continue
+            return DOWNLOAD_RESULT['SUCCESS']
 
         if isNormalConn(r.status):
             try:
