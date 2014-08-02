@@ -61,12 +61,6 @@ class LinkExtractor(Thread):
                 sql_result = sql_reg.fetchone()
                 if not sql_result[0] == 0:
                     continue
-
-                # add to the list
-                URL_DOWNLOAD_LIST.put(link_addr)
-                # insert into database
-                self.sql_cursor.execute("insert into `Pages_linklist` (`title`, `address`) values( '%s', '%s')"
-                    % (link_name, link_addr))
         
             self.sql_conn.commit()
             self.sql_conn.close()

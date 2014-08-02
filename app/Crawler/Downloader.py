@@ -17,6 +17,8 @@ class Downloader(Thread):
         self.interval = interval
         self.url = None
         self.fail_time = 0          # time of download webpage fail
+        self.sql_conn = None
+        self.sql_cursor = None
 
     def run(self):
         printSuccess(hint="Download Thread-%d created." % (self.thread_num))
@@ -56,13 +58,13 @@ class Downloader(Thread):
         scheme = parse_url.scheme
         (filename, filetype) = getFileInURL(parse_url.path)
 
-        # headers = {"User-Agent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.153 Safari/537.36"}
+        headers = {"User-Agent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.153 Safari/537.36"}
         timeout = Timeout(connect=2., read=7.)
         if scheme.lower() is 'https':
             http = PoolManager(
                 cert_reqs='CERT_REQUIRED', 
                 ca_certs=certifi.where(),
-                # headers=headers,
+                headers=headers,
                 timeout=timeout
             )
         else:
@@ -95,6 +97,19 @@ class Downloader(Thread):
 
         URL_VISITED_LIST.append(self.url)
         printSuccess(hint="Finish", msg=self.url)
+
+        # add to the list
+        self.sql_conn = sqlite3.connect(DATABASE)
+        self.sql_cursor = self.sql_conn.cursor()
+
+        URL_DOWNLOAD_LIST.put(self.url)
+        # insert into database
+        self.sql_cursor.execute("insert into `Pages_linklist` (`title`, `address`) values( '%s', '%s')"
+            % (link_name, self.url))
+
+        self.sql_conn.commit()
+        self.sql_conn.close()
+
         self.url = None
         self.fail_time = 0
         return DOWNLOAD_RESULT['SUCCESS']
