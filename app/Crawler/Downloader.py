@@ -79,6 +79,10 @@ class Downloader(Thread):
         ##################### End #####################
 
         ##################### Start Save Web Page #####################
+        # is not a HTML page
+        if r.headers['Content-Type'].split(';')[0] != 'text/html':
+            continue
+
         if isNormalConn(r.status):
             try:
                 file_name = save(data=r.data,filename=filename, dir=DOWNLOAD_DIR)
