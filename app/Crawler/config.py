@@ -1,4 +1,5 @@
 from queue import Queue
+from threading import Semaphore
 import os
 
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
@@ -22,6 +23,7 @@ ANAYLIZER_THREAD_POOL_SIZE = 2
 REDOWNLOAD_TIME = 5
 URL_NEW_DOWNLOAD_TIMEOUT = 10
 URL_NEW_EXTRACT_TIMEOUT = 20
+LINK_REF_ACCUM_SEM = Semaphore(1)
 
 HTTP_RESPONSE_ERROR = {
             204:"No Response", \

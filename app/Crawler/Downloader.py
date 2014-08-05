@@ -1,11 +1,12 @@
 from BasicOperation import sleep, printState, printSuccess, printFail, isNormalConn, save, getFileInURL
-from config import DOWNLOAD_DIR, DOWNLOAD_RESULT, URL_DOWNLOAD_LIST, URL_VISITED_LIST, URL_VISITED_FILE_LIST, REDOWNLOAD_TIME, URL_NEW_DOWNLOAD_TIMEOUT
+from config import DOWNLOAD_DIR, DOWNLOAD_RESULT, URL_DOWNLOAD_LIST, URL_VISITED_LIST, URL_VISITED_FILE_LIST, REDOWNLOAD_TIME, URL_NEW_DOWNLOAD_TIMEOUT, LINK_REF_ACCUM_SEM, DATABASE
 from threading import Thread
 from urllib3.util.timeout import Timeout
 from urllib3.util.url import parse_url as parseURL
 from urllib3 import PoolManager
 from urllib3.exceptions import SSLError, MaxRetryError
 from queue import Empty as QueueEmpty
+import sqlite3
 import certifi
 
 class Downloader(Thread):
@@ -25,7 +26,7 @@ class Downloader(Thread):
         
         while not self.thread_stop:
             try:
-                self.url = URL_DOWNLOAD_LIST.get(timeout=URL_NEW_DOWNLOAD_TIMEOUT)
+                (link_name, self.url) = URL_DOWNLOAD_LIST.get(timeout=URL_NEW_DOWNLOAD_TIMEOUT)
             except QueueEmpty as e:
                 printSuccess(hint="Thread-%d Destoried cause of No URL left." % (self.thread_num))
                 return
@@ -98,19 +99,42 @@ class Downloader(Thread):
         URL_VISITED_LIST.append(self.url)
         printSuccess(hint="Finish", msg=self.url)
 
+        URL_DOWNLOAD_LIST.put(self.url)
+        ##################### End  Save #####################
+
+
+        ##################### Record Visited Link #####################
         # add to the list
         self.sql_conn = sqlite3.connect(DATABASE)
         self.sql_cursor = self.sql_conn.cursor()
 
-        URL_DOWNLOAD_LIST.put(self.url)
-        # insert into database
+        # insert link address into visited history
         self.sql_cursor.execute("insert into `Pages_linklist` (`title`, `address`) values( '%s', '%s')"
             % (link_name, self.url))
+        self.sql_conn.commit()
+
+        # accumulation is a critical section
+        LINK_REF_ACCUM_SEM.acquire()            # stop
+
+        # accum the link ref time
+        id = self.sql_cursor.execute("select `id` from `Pages_linklist` where `address`='%s'"
+            % (self.url)).fetchone()[0]
+        accum = self.sql_cursor.execute("select `accum` from `Pages_linkreftime` where `link_id`=%d"
+            % (id)).fetchone()
+        if accum is None:
+            accum = 1
+        else:
+            accum = accum[0] + 1
+        self.sql_cursor.execute("insert into `Pages_linkreftime` (`link_id`, `accum`) values(%d, %d)"
+            % (id, accum))        
 
         self.sql_conn.commit()
+
+        LINK_REF_ACCUM_SEM.release()            # resume
+
         self.sql_conn.close()
+        ##################### End Record #####################
 
         self.url = None
         self.fail_time = 0
         return DOWNLOAD_RESULT['SUCCESS']
-        ##################### End #####################
