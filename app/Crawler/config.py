@@ -1,11 +1,12 @@
 from queue import Queue
 from threading import Semaphore
+from time import strftime, localtime
 import os
 
 BASE_DIR = os.path.dirname(os.path.dirname(__file__))
-DOWNLOAD_DIR = os.path.join(os.path.dirname(BASE_DIR), 'WebPages')
-HISTORY_FILE = os.path.join(DOWNLOAD_DIR, 'record.his')
-LOG_FILE = os.path.join(DOWNLOAD_DIR, 'process.log')
+LOG_DIR = os.path.join(os.path.dirname(BASE_DIR), 'log')
+HISTORY_FILE = os.path.join(LOG_DIR, 'record.his')
+LOG_FILE = os.path.join(LOG_DIR, 'log_%s.log' % strftime("%Y%m%d_%H:%M:%S", localtime()) )
 DATABASE = os.path.join(BASE_DIR, 'data.db')
 
 HEADER = '\033[95m'
@@ -16,10 +17,9 @@ FAIL = '\033[91m'
 ENDC = '\033[0m'
 
 URL_DOWNLOAD_LIST = Queue()
-URL_VISITED_LIST = []
-URL_VISITED_FILE_LIST = Queue()
+URL_VISITED_LIST = Queue()
 DOWLOAD_THREAD_POOL_SIZE = 50
-ANAYLIZER_THREAD_POOL_SIZE = 2
+ANAYLIZER_THREAD_POOL_SIZE = 5
 REDOWNLOAD_TIME = 5
 URL_NEW_DOWNLOAD_TIMEOUT = 10
 URL_NEW_EXTRACT_TIMEOUT = 20
@@ -46,5 +46,6 @@ HTTP_RESPONSE_ERROR = {
 
 DOWNLOAD_RESULT = {
       "SUCCESS":300, \
+      "DOWNLOADED":500, \
       "FAIL":400, \
 }

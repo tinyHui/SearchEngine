@@ -1,5 +1,5 @@
-from config import URL_DOWNLOAD_LIST, URL_VISITED_FILE_LIST, URL_NEW_EXTRACT_TIMEOUT, DATABASE
-from BasicOperation import printState, printSuccess, printFail, read, getBaseURL, genFullURL, isValuableURL
+from config import URL_DOWNLOAD_LIST, URL_VISITED_LIST, URL_NEW_EXTRACT_TIMEOUT, DATABASE, URL_NEW_EXTRACT_TIMEOUT
+from BasicOperation import printSuccess, printFail, getBaseURL, genFullURL, isValuableURL
 from bs4 import BeautifulSoup
 from threading import Thread
 from queue import Empty as QueueEmpty
@@ -10,7 +10,7 @@ class LinkExtractor(Thread):
     def __init__(self, *, base_url):
         super(LinkExtractor, self).__init__()
         self.base_url = base_url
-        self.html_file = None
+        self.url = None
         self.soup = None
         self.sql_conn = None
         self.sql_cursor = None
@@ -18,21 +18,21 @@ class LinkExtractor(Thread):
     def run(self):
         while True:
             try:
-                # self.html_file = URL_VISITED_FILE_LIST.get(timeout=URL_NEW_EXTRACT_TIMEOUT)
-                self.html_file = URL_VISITED_FILE_LIST.get(timeout=10)      # time unit is second
+                self.url = URL_VISITED_LIST.get(timeout=URL_NEW_EXTRACT_TIMEOUT)      # time unit is second
             except QueueEmpty as e:
                 printSuccess(hint="Link Extractor Destroyed cause of No More File need to be anaylises.")
                 return
 
-            content = read(self.html_file)
+            self.sql_conn = sqlite3.connect(DATABASE)
+            self.sql_cursor = self.sql_conn.cursor()
+
+            content = self.sql_cursor.execute("select `content` from `Pages_linklist` where `url`='%s'"
+                % (self.url,)).fetchone()[0]
             try:
                 self.soup = BeautifulSoup(content)
             except TypeError as e:
-                printFail(hint="Unable to open", msg=self.html_file)
+                printFail(hint="Unable to open", msg=self.url)
                 continue
-
-            self.sql_conn = sqlite3.connect(DATABASE)
-            self.sql_cursor = self.sql_conn.cursor()
 
             for link_tag in self.soup.find_all('a'):
                 link_name = link_tag.text.replace('\n','').strip()
@@ -54,13 +54,17 @@ class LinkExtractor(Thread):
                     continue
 
                 # have never been downloaded
-                sql_reg = self.sql_cursor.execute("select count(*) from `Pages_linklist` where `address`='%s'"
-                    % (link_addr))
+                sql_reg = self.sql_cursor.execute('''select count(1) from `Pages_linklist` where `url`=?''',
+                    (link_addr,))
 
                 # if this URL is been scanned before
                 sql_result = sql_reg.fetchone()
                 if not sql_result[0] == 0:
                     continue
+
+                URL_DOWNLOAD_LIST.put((link_name, link_addr))
+
+            printSuccess(hint="Extract all the links under", msg=self.url)
         
             self.sql_conn.commit()
             self.sql_conn.close()

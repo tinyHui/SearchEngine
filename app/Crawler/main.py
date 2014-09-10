@@ -1,5 +1,5 @@
 from Downloader import Downloader
-from config import URL_DOWNLOAD_LIST, URL_VISITED_FILE_LIST, DOWLOAD_THREAD_POOL_SIZE, ANAYLIZER_THREAD_POOL_SIZE
+from config import URL_DOWNLOAD_LIST, URL_VISITED_LIST, DOWLOAD_THREAD_POOL_SIZE, ANAYLIZER_THREAD_POOL_SIZE
 from BasicOperation import getBaseURL
 from HTMLAnaylizer.LinkExtractor import LinkExtractor
 from time import sleep
@@ -9,7 +9,7 @@ if __name__ == '__main__':
     base_url = getBaseURL(start_url)
     
     # begin start multi threads
-    URL_DOWNLOAD_LIST.put(start_url)
+    URL_DOWNLOAD_LIST.put(("Main Page", start_url))
     thread_pool_download = []
     thread_pool_link_extract = []
 

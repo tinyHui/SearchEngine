@@ -31,31 +31,6 @@ def logRecord(state, hint, msg):
             f.write("%s%s: %s\n" % (state, hint, msg))
     f.close()
 
-# files
-def save(*, data, filename, dir=None):
-    if dir is not None or filename is not None:
-        filename = os.path.join(dir, filename)
-
-    try:
-        with open(filename, 'wb') as f:
-            f.write(data)
-    except FileNotFoundError as e:
-        dir = os.path.dirname(filename)
-        printFail(hint='Try create folder', msg=dir)
-        os.makedirs(dir)
-        with open(filename, 'wb') as f:
-            f.write(data)
-    f.close()
-    printSuccess(hint="Saved", msg=filename)
-    return filename
-
-def read(filename):
-    if not os.path.isfile(filename):
-        return None
-    with open(filename, 'r') as f:
-        content = f.read()
-    return content
-
 
 # HTTP connection
 def isNormalConn(status):

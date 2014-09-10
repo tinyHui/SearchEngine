@@ -1,5 +1,5 @@
-from BasicOperation import sleep, printState, printSuccess, printFail, isNormalConn, save, getFileInURL
-from config import DOWNLOAD_DIR, DOWNLOAD_RESULT, URL_DOWNLOAD_LIST, URL_VISITED_LIST, URL_VISITED_FILE_LIST, REDOWNLOAD_TIME, URL_NEW_DOWNLOAD_TIMEOUT, LINK_REF_ACCUM_SEM, DATABASE
+from BasicOperation import sleep, printState, printSuccess, printFail, isNormalConn, getFileInURL
+from config import DOWNLOAD_RESULT, URL_DOWNLOAD_LIST, URL_VISITED_LIST, REDOWNLOAD_TIME, URL_NEW_DOWNLOAD_TIMEOUT, LINK_REF_ACCUM_SEM, DATABASE
 from threading import Thread
 from urllib3.util.timeout import Timeout
 from urllib3.util.url import parse_url as parseURL
@@ -11,13 +11,13 @@ import certifi
 
 class Downloader(Thread):
     """docstring for Downloader"""
-    def __init__(self, *, interval=100, thread_num=None):
+    def __init__(self, *, interval=500, thread_num=None):
         super(Downloader, self).__init__()
         self.thread_num = thread_num + 1
         self.thread_stop = False
         self.interval = interval
+        self.title = None
         self.url = None
-        self.fail_time = 0          # time of download webpage fail
         self.sql_conn = None
         self.sql_cursor = None
 
@@ -25,33 +25,54 @@ class Downloader(Thread):
         printSuccess(hint="Download Thread-%d created." % (self.thread_num))
         
         while not self.thread_stop:
+            self.sql_conn = sqlite3.connect(DATABASE)
+            self.sql_cursor = self.sql_conn.cursor()
             try:
-                (link_name, self.url) = URL_DOWNLOAD_LIST.get(timeout=URL_NEW_DOWNLOAD_TIMEOUT)
+                (self.title, self.url) = URL_DOWNLOAD_LIST.get(timeout=URL_NEW_DOWNLOAD_TIMEOUT)
             except QueueEmpty as e:
                 printSuccess(hint="Thread-%d Destoried cause of No URL left." % (self.thread_num))
                 return
 
-            download_result = self.download()
+            download_result = DOWNLOAD_RESULT['FAIL']
+            fail_time = 0            # allowed times for fail download
 
             # download fail, retry
-            while download_result != DOWNLOAD_RESULT:
+            while download_result == DOWNLOAD_RESULT['FAIL']:
                 # if retry too much times, stop
-                if self.fail_time > REDOWNLOAD_TIME:    break
+                if fail_time > REDOWNLOAD_TIME:     break
                 # wait a while then retry donwload
-                sleep(self.interval * (self.fail_time+1))
-                self.fail_time += 1
-                # redownload
+                sleep(self.interval * (fail_time+1))
+                # begin download
                 download_result = self.download()
+                fail_time += 1
 
+            if download_result == DOWNLOAD_RESULT['FAIL']:
+                printFail(hint="Give up", msg=self.url)
+            else:
+                self.accumRefTime()   
+                printSuccess(hint="Finish", msg=self.url)
+                URL_VISITED_LIST.put(self.url)
+            fail_time = 0
+            self.title = None
+            self.url = None
+
+        self.sql_conn.close()
         printSuccess(hint="Thread-%d Destoried." % (self.thread_num))
+
 
     def stop(self):
         self.url = ''
         self.thread_stop = True
 
+
     def download(self):
         if self.url is None or self.url == '':
             return DOWNLOAD_RESULT['FAIL']
+
+        download_before = self.sql_cursor.execute('''select count(1) from `Pages_linklist` where `url`=?''', 
+            (self.url,)).fetchone()[0]
+        if download_before:
+            return DOWNLOAD_RESULT['DOWNLOADED']
 
         ##################### Start Download Web Page #####################
         printState(hint="Connecting", msg=self.url)
@@ -69,12 +90,11 @@ class Downloader(Thread):
                 timeout=timeout
             )
         else:
-            http = PoolManager(timeout=timeout)
+            http = PoolManager(headers=headers, timeout=timeout)
 
         try:
             r = http.request('GET', self.url)
             printState(hint='Establish', msg=self.url)
-
         except SSLError as e:
             printFail(hint="SSL Error", msg=self.url)
             return DOWNLOAD_RESULT['FAIL']
@@ -89,52 +109,31 @@ class Downloader(Thread):
             return DOWNLOAD_RESULT['SUCCESS']
 
         if isNormalConn(r.status):
+            # insert link address into visited history
             try:
-                file_name = save(data=r.data,filename=filename, dir=DOWNLOAD_DIR)
-            except AttributeError as e:
-                printFail(hint="Save file fail in", msg=self.url)
-                return DOWNLOAD_RESULT['FAIL']
-            URL_VISITED_FILE_LIST.put(file_name)
+                self.sql_cursor.execute('''insert into `Pages_linklist` 
+                    (`title`, `url`, `content`) values(?, ?, ?)''', 
+                    (self.title, self.url, r.data))
+            except sqlite3.IntegrityError as e:
+                printFail(hint="UNIQUE constraint failed", msg=self.url)
 
-        URL_VISITED_LIST.append(self.url)
-        printSuccess(hint="Finish", msg=self.url)
-
-        URL_DOWNLOAD_LIST.put(self.url)
+            self.sql_conn.commit()
+            printSuccess(hint="Saved", msg=self.url)
+            return DOWNLOAD_RESULT['SUCCESS']
+        else:
+            return DOWNLOAD_RESULT['FAIL']
         ##################### End  Save #####################
 
 
-        ##################### Record Visited Link #####################
-        # add to the list
-        self.sql_conn = sqlite3.connect(DATABASE)
-        self.sql_cursor = self.sql_conn.cursor()
-
-        # insert link address into visited history
-        self.sql_cursor.execute("insert into `Pages_linklist` (`title`, `address`) values( '%s', '%s')"
-            % (link_name, self.url))
-        self.sql_conn.commit()
-
+    def accumRefTime(self):
         # accumulation is a critical section
         LINK_REF_ACCUM_SEM.acquire()            # stop
 
-        # accum the link ref time
-        id = self.sql_cursor.execute("select `id` from `Pages_linklist` where `address`='%s'"
-            % (self.url)).fetchone()[0]
-        accum = self.sql_cursor.execute("select `accum` from `Pages_linkreftime` where `link_id`=%d"
-            % (id)).fetchone()
-        if accum is None:
-            accum = 1
-        else:
-            accum = accum[0] + 1
-        self.sql_cursor.execute("insert into `Pages_linkreftime` (`link_id`, `accum`) values(%d, %d)"
-            % (id, accum))        
-
+        reftime = self.sql_cursor.execute('''select `reftime` from `Pages_linklist` where `url`=?''', 
+            (self.url,)).fetchone()[0]
+        self.sql_cursor.execute('''update `Pages_linklist` set `reftime`=? where `url`=?''', 
+            (reftime+1, self.url))
         self.sql_conn.commit()
 
         LINK_REF_ACCUM_SEM.release()            # resume
-
-        self.sql_conn.close()
         ##################### End Record #####################
-
-        self.url = None
-        self.fail_time = 0
-        return DOWNLOAD_RESULT['SUCCESS']
