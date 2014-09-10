@@ -35,8 +35,11 @@ class LinkExtractor(Thread):
                 continue
 
             for link_tag in self.soup.find_all('a'):
-                link_name = link_tag.text.replace('\n','').strip()
-                link_addr = link_tag.get('href').strip()
+                try:
+                    link_name = link_tag.text.replace('\n','').strip()
+                    link_addr = link_tag.get('href').strip()
+                except AttributeError as e:
+                    continue
 
                 # link is None or empty string
                 if link_addr is None or link_addr == "":

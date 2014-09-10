@@ -78,7 +78,6 @@ class Downloader(Thread):
         printState(hint="Connecting", msg=self.url)
         parse_url = parseURL(self.url)
         scheme = parse_url.scheme
-        (filename, filetype) = getFileInURL(parse_url.path)
 
         headers = {"User-Agent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_4) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/35.0.1916.153 Safari/537.36"}
         timeout = Timeout(connect=2., read=7.)
@@ -128,12 +127,15 @@ class Downloader(Thread):
     def accumRefTime(self):
         # accumulation is a critical section
         LINK_REF_ACCUM_SEM.acquire()            # stop
+        print("locked")
 
         reftime = self.sql_cursor.execute('''select `reftime` from `Pages_linklist` where `url`=?''', 
             (self.url,)).fetchone()[0]
         self.sql_cursor.execute('''update `Pages_linklist` set `reftime`=? where `url`=?''', 
             (reftime+1, self.url))
         self.sql_conn.commit()
+
+        print("release")
 
         LINK_REF_ACCUM_SEM.release()            # resume
         ##################### End Record #####################
