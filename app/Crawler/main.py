@@ -1,8 +1,7 @@
 from Downloader import Downloader
-from config import URL_DOWNLOAD_LIST, URL_VISITED_LIST, DOWLOAD_THREAD_POOL_SIZE, ANAYLIZER_THREAD_POOL_SIZE
+from config import URL_DOWNLOAD_LIST, URL_VISITED_LIST, DOWLOAD_THREAD_POOL_SIZE, ANAYLIZER_THREAD_POOL_SIZE, DATABASE
 from BasicOperation import getBaseURL
 from HTMLAnaylizer.LinkExtractor import LinkExtractor
-from time import sleep
 
 if __name__ == '__main__':
     start_url = "https://www.python.org/"

@@ -13,15 +13,15 @@ def sleep(seconds):
 # print message
 def printState(*, hint='', msg=''):
     logRecord("State\t", hint, msg)
-    # print(HEADER, hint, ENDC, msg)
+    print(HEADER, hint, ENDC, msg)
 
 def printSuccess(*, hint='', msg=''):
     logRecord("Success\t", hint, msg)
-    # print(OKGREEN, hint, ENDC, msg)
+    print(OKGREEN, hint, ENDC, msg)
 
 def printFail(*, hint='', msg=''):
     logRecord("Fail\t", hint, msg)
-    # print(FAIL, hint, ENDC, msg)
+    print(FAIL, hint, ENDC, msg)
 
 def logRecord(state, hint, msg):
     with open(LOG_FILE, 'a') as f:
@@ -69,12 +69,10 @@ def getBaseURL(url):
         return ""
 
 def genFullURL(base_url, url):
-    pattern = r'^\/?([\W\w]*)\/?#[\W\w]*?$'
-    m = re.match(pattern, url)
     url = urljoin(base_url, url)
     return url
 
 def isValuableURL(url):
-    pattern = r'(^#[\W\w]*$)|(^mailto:[\W\w]*$)|(^news:[\W\w]*$)|(^javascript:[\W\w]*;?$)|(^\/$)'
+    pattern = r'(^#[\W\w]*$)|(^mailto:[\W\w]*$)|(^news:[\W\w]*$)|(^javascript:[\W\w]*;?$)'
     m = re.match(pattern, url)
     return not m

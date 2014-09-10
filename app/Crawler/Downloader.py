@@ -1,5 +1,5 @@
 from BasicOperation import sleep, printState, printSuccess, printFail, isNormalConn, getFileInURL
-from config import DOWNLOAD_RESULT, URL_DOWNLOAD_LIST, URL_VISITED_LIST, REDOWNLOAD_TIME, URL_NEW_DOWNLOAD_TIMEOUT, LINK_REF_ACCUM_SEM, DATABASE
+from config import DOWNLOAD_RESULT, URL_DOWNLOAD_LIST, URL_VISITED_LIST, REDOWNLOAD_TIME, URL_NEW_DOWNLOAD_TIMEOUT, DATABASE
 from threading import Thread
 from urllib3.util.timeout import Timeout
 from urllib3.util.url import parse_url as parseURL
@@ -23,15 +23,15 @@ class Downloader(Thread):
 
     def run(self):
         printSuccess(hint="Download Thread-%d created." % (self.thread_num))
+        self.sql_conn = sqlite3.connect(DATABASE)
+        self.sql_cursor = self.sql_conn.cursor()
         
-        while not self.thread_stop:
-            self.sql_conn = sqlite3.connect(DATABASE)
-            self.sql_cursor = self.sql_conn.cursor()
+        while True:
             try:
                 (self.title, self.url) = URL_DOWNLOAD_LIST.get(timeout=URL_NEW_DOWNLOAD_TIMEOUT)
             except QueueEmpty as e:
                 printSuccess(hint="Thread-%d Destoried cause of No URL left." % (self.thread_num))
-                return
+                break
 
             download_result = DOWNLOAD_RESULT['FAIL']
             fail_time = 0            # allowed times for fail download
@@ -49,7 +49,6 @@ class Downloader(Thread):
             if download_result == DOWNLOAD_RESULT['FAIL']:
                 printFail(hint="Give up", msg=self.url)
             else:
-                self.accumRefTime()   
                 printSuccess(hint="Finish", msg=self.url)
                 URL_VISITED_LIST.put(self.url)
             fail_time = 0
@@ -60,19 +59,9 @@ class Downloader(Thread):
         printSuccess(hint="Thread-%d Destoried." % (self.thread_num))
 
 
-    def stop(self):
-        self.url = ''
-        self.thread_stop = True
-
-
     def download(self):
         if self.url is None or self.url == '':
             return DOWNLOAD_RESULT['FAIL']
-
-        download_before = self.sql_cursor.execute('''select count(1) from `Pages_linklist` where `url`=?''', 
-            (self.url,)).fetchone()[0]
-        if download_before:
-            return DOWNLOAD_RESULT['DOWNLOADED']
 
         ##################### Start Download Web Page #####################
         printState(hint="Connecting", msg=self.url)
@@ -108,13 +97,15 @@ class Downloader(Thread):
             return DOWNLOAD_RESULT['SUCCESS']
 
         if isNormalConn(r.status):
-            # insert link address into visited history
-            try:
+            if self.sql_cursor.execute('''select count(1) from `Pages_linklist` where `url`=?''',
+                (self.url,)).fetchone()[0] == 0:
                 self.sql_cursor.execute('''insert into `Pages_linklist` 
-                    (`title`, `url`, `content`) values(?, ?, ?)''', 
-                    (self.title, self.url, r.data))
-            except sqlite3.IntegrityError as e:
-                printFail(hint="UNIQUE constraint failed", msg=self.url)
+                    (`title`, `url`, `reftime`) values(?, ?, ?)''', 
+                    (self.title, self.url, 1))
+            # update content
+            self.sql_cursor.execute('''update `Pages_linklist` 
+                set `content`=? where `url`=?''', 
+                (r.data, self.url))
 
             self.sql_conn.commit()
             printSuccess(hint="Saved", msg=self.url)
@@ -122,20 +113,3 @@ class Downloader(Thread):
         else:
             return DOWNLOAD_RESULT['FAIL']
         ##################### End  Save #####################
-
-
-    def accumRefTime(self):
-        # accumulation is a critical section
-        LINK_REF_ACCUM_SEM.acquire()            # stop
-        print("locked")
-
-        reftime = self.sql_cursor.execute('''select `reftime` from `Pages_linklist` where `url`=?''', 
-            (self.url,)).fetchone()[0]
-        self.sql_cursor.execute('''update `Pages_linklist` set `reftime`=? where `url`=?''', 
-            (reftime+1, self.url))
-        self.sql_conn.commit()
-
-        print("release")
-
-        LINK_REF_ACCUM_SEM.release()            # resume
-        ##################### End Record #####################
