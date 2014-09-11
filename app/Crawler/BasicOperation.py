@@ -23,6 +23,10 @@ def printFail(*, hint='', msg=''):
     logRecord("Fail\t", hint, msg)
     print(FAIL, hint, ENDC, msg)
 
+def printWarning(*, hint='', msg=''):
+    logRecord("Warning\t", hint, msg)
+    print(WARNING, hint, ENDC, msg)
+
 def logRecord(state, hint, msg):
     with open(LOG_FILE, 'a') as f:
         if msg == '':
@@ -36,11 +40,10 @@ def logRecord(state, hint, msg):
 def isNormalConn(status):
     if status != 200 and status/100 != 3:
         try:
-            printFail(hint="Connection Fail", msg=HTTP_RESPONSE_ERROR[status])
+            return (False, HTTP_RESPONSE_ERROR[status])
         except KeyError as e:
-            printFail(hint="Connection Fail", msg=e)
-        return False
-    return True
+            return (False, e)
+    return (True, "Success")
 
 def getFileInURL(url):
     urls = parseURL(url).path.split('/')

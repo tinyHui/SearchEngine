@@ -58,14 +58,11 @@ class LinkExtractor(Thread):
                 if not self.base_url == getBaseURL(link_addr):
                     continue
 
-                # have never been downloaded
+                # have never been recorded
                 if self.sql_cursor.execute('''select count(1) from `Pages_linklist` where `url`=?''',
                     (link_addr,)).fetchone()[0] == 0:
                     URL_DOWNLOAD_LIST.put((link_title, link_addr))
-                    try:
-                        self.accumRefTime(link_title, link_addr, firsttime=True)
-                    except:
-                        print(link_addr)
+                    self.accumRefTime(link_title, link_addr, firsttime=True)
                 else:
                     self.accumRefTime(link_title, link_addr, firsttime=False)   
 
@@ -83,10 +80,8 @@ class LinkExtractor(Thread):
                     (`title`, `url`, `reftime`) values(?, ?, ?)''', 
                     (link_title, link_addr, 1))
         else:
-            reftime = self.sql_cursor.execute('''select `reftime` from `Pages_linklist` where `url`=?''', 
-            (self.url,)).fetchone()[0]
-            self.sql_cursor.execute('''update `Pages_linklist` set `reftime`=? where `url`=?''', 
-                (reftime+1, self.url))
+            self.sql_cursor.execute('''update `Pages_linklist` set `reftime`=`reftime`+1 where `url`=?''', 
+                (self.url,))
 
         self.sql_conn.commit()
 

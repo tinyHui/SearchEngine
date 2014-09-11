@@ -1,4 +1,4 @@
-from BasicOperation import sleep, printState, printSuccess, printFail, isNormalConn, getFileInURL
+from BasicOperation import sleep, printState, printSuccess, printWarning, printFail, isNormalConn, getFileInURL
 from config import DOWNLOAD_RESULT, URL_DOWNLOAD_LIST, URL_VISITED_LIST, REDOWNLOAD_TIME, URL_NEW_DOWNLOAD_TIMEOUT, DATABASE
 from threading import Thread
 from urllib3.util.timeout import Timeout
@@ -49,7 +49,6 @@ class Downloader(Thread):
             if download_result == DOWNLOAD_RESULT['FAIL']:
                 printFail(hint="Give up", msg=self.url)
             else:
-                printSuccess(hint="Finish", msg=self.url)
                 URL_VISITED_LIST.put(self.url)
             fail_time = 0
             self.title = None
@@ -96,12 +95,14 @@ class Downloader(Thread):
         if r.headers['Content-Type'].split(';')[0] != 'text/html':
             return DOWNLOAD_RESULT['SUCCESS']
 
-        if isNormalConn(r.status):
+        (connected, message) = isNormalConn(r.status)
+        if connected:
             if self.sql_cursor.execute('''select count(1) from `Pages_linklist` where `url`=?''',
                 (self.url,)).fetchone()[0] == 0:
                 self.sql_cursor.execute('''insert into `Pages_linklist` 
                     (`title`, `url`, `reftime`) values(?, ?, ?)''', 
                     (self.title, self.url, 1))
+                printWarning(hint="Create db record while downloading", msg=self.url)
             # update content
             self.sql_cursor.execute('''update `Pages_linklist` 
                 set `content`=? where `url`=?''', 
@@ -111,5 +112,6 @@ class Downloader(Thread):
             printSuccess(hint="Saved", msg=self.url)
             return DOWNLOAD_RESULT['SUCCESS']
         else:
+            printFail(hint=message, msg=self.url)
             return DOWNLOAD_RESULT['FAIL']
         ##################### End  Save #####################
