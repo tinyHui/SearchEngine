@@ -1,5 +1,5 @@
-from BasicOperation import sleep, printState, printSuccess, printWarning, printFail, isNormalConn, getFileInURL
-from config import DOWNLOAD_RESULT, URL_DOWNLOAD_LIST, URL_VISITED_LIST, REDOWNLOAD_TIME, URL_NEW_DOWNLOAD_TIMEOUT, DATABASE
+from BasicOperation import sleep, printState, printSuccess, printWarning, printFail, isNormalConn
+from config import DOWNLOAD_RESULT, URL_DOWNLOAD_LIST, URL_VISITED_LIST, REDOWNLOAD_TIME, URL_NEW_DOWNLOAD_TIMEOUT, DATABASE, DATABASE_LOCK
 from threading import Thread
 from urllib3.util.timeout import Timeout
 from urllib3.util.url import parse_url as parseURL
@@ -30,7 +30,6 @@ class Downloader(Thread):
             try:
                 (self.title, self.url) = URL_DOWNLOAD_LIST.get(timeout=URL_NEW_DOWNLOAD_TIMEOUT)
             except QueueEmpty as e:
-                printSuccess(hint="Thread-%d Destoried cause of No URL left." % (self.thread_num))
                 break
 
             download_result = DOWNLOAD_RESULT['FAIL']
@@ -55,7 +54,7 @@ class Downloader(Thread):
             self.url = None
 
         self.sql_conn.close()
-        printSuccess(hint="Thread-%d Destoried." % (self.thread_num))
+        printSuccess(hint="Thread-%d Destoried cause of No URL left." % (self.thread_num))
 
 
     def download(self):
@@ -93,22 +92,27 @@ class Downloader(Thread):
         ##################### Start Save Web Page #####################
         # is not a HTML page
         if r.headers['Content-Type'].split(';')[0] != 'text/html':
+            printWarning(hint="Not a Web Page", msg=self.url)
             return DOWNLOAD_RESULT['SUCCESS']
 
         (connected, message) = isNormalConn(r.status)
         if connected:
             if self.sql_cursor.execute('''select count(1) from `Pages_linklist` where `url`=?''',
                 (self.url,)).fetchone()[0] == 0:
+                DATABASE_LOCK.acquire()
                 self.sql_cursor.execute('''insert into `Pages_linklist` 
-                    (`title`, `url`, `reftime`) values(?, ?, ?)''', 
-                    (self.title, self.url, 1))
+                        (`title`, `url`) values(?, ?)''', 
+                        (self.title, self.url))
+                DATABASE_LOCK.release()
                 printWarning(hint="Create db record while downloading", msg=self.url)
-            # update content
+            # update content 
             self.sql_cursor.execute('''update `Pages_linklist` 
                 set `content`=? where `url`=?''', 
                 (r.data, self.url))
 
+            DATABASE_LOCK.acquire() 
             self.sql_conn.commit()
+            DATABASE_LOCK.release()
             printSuccess(hint="Saved", msg=self.url)
             return DOWNLOAD_RESULT['SUCCESS']
         else:

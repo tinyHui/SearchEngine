@@ -1,5 +1,5 @@
-from config import URL_DOWNLOAD_LIST, URL_VISITED_LIST, URL_NEW_EXTRACT_TIMEOUT, DATABASE, URL_NEW_EXTRACT_TIMEOUT, LINK_REF_ACCUM_SEM
-from BasicOperation import printSuccess, printFail, getBaseURL, genFullURL, isValuableURL
+from config import URL_DOWNLOAD_LIST, URL_VISITED_LIST, URL_NEW_EXTRACT_TIMEOUT, DATABASE, URL_NEW_EXTRACT_TIMEOUT, DATABASE_LOCK
+from BasicOperation import printSuccess, printFail, getBaseURL, genFullURL
 from bs4 import BeautifulSoup
 from threading import Thread
 from queue import Empty as QueueEmpty
@@ -32,6 +32,9 @@ class LinkExtractor(Thread):
             except TypeError as e:
                 print(self.sql_cursor.execute("select `content` from `Pages_linklist` where `url`=?", 
                     (self.url,)).fetchone())
+                DATABASE_LOCK.acquire() 
+                self.sql_conn.commit()
+                DATABASE_LOCK.release()
                 break
 
             try:
@@ -40,49 +43,51 @@ class LinkExtractor(Thread):
                 printFail(hint="Unable to open", msg=self.url)
                 continue
 
-            for link_tag in self.soup.find_all('a'):
-                try:
-                    link_title = link_tag.text.replace('\n','').strip()
-                    link_addr = link_tag.get('href').strip()
-                except AttributeError as e:
-                    continue
+            sublinks = self.extractAllLinks()
+            sublinks_num = 0
 
-                # if link is not a valuable link
-                if not isValuableURL(link_addr):
-                    continue
-         
+            for (title, addr)  in sublinks:
                 # full fill the link as a 
-                link_addr = genFullURL(self.base_url, link_addr)
-                
-                # if link is not under the same domain
-                if not self.base_url == getBaseURL(link_addr):
+                addr = genFullURL(self.base_url, addr)
+                # if link is not a valuable link
+                if addr is None:
                     continue
 
-                # have never been recorded
-                if self.sql_cursor.execute('''select count(1) from `Pages_linklist` where `url`=?''',
-                    (link_addr,)).fetchone()[0] == 0:
-                    URL_DOWNLOAD_LIST.put((link_title, link_addr))
-                    self.accumRefTime(link_title, link_addr, firsttime=True)
-                else:
-                    self.accumRefTime(link_title, link_addr, firsttime=False)   
+                try:
+                    self.sql_cursor.execute('''insert into `Pages_linklist` 
+                        (`title`, `url`) values (?, ?)''', 
+                        (title, addr))
+                    self.sql_cursor.execute('''insert into  `Pages_sublinklist` (`link_id`, `sublink_id`) 
+                        select a.`id`, b.`id` from `Pages_linklist` a, `Pages_linklist` b 
+                        where a.`url`=? and b.`url`=?''',
+                        (self.url, addr))
+                    URL_DOWNLOAD_LIST.put((title, addr))
+                except sqlite3.IntegrityError as e:         # if recorded before
+                    pass
+                sublinks_num += 1
+
+            self.sql_cursor.execute('''update `Pages_linklist` 
+                set `sublinks_num`=? where `url`=?''', 
+                (sublinks_num, self.url))
 
             printSuccess(hint="Extract all links under", msg=self.url)
-        
-        self.sql_conn.commit()
+
+            DATABASE_LOCK.acquire() 
+            self.sql_conn.commit()
+            DATABASE_LOCK.release()
+
         self.sql_conn.close()
 
-    def accumRefTime(self, link_title, link_addr, firsttime):
-        # accumulation is a critical section
-        LINK_REF_ACCUM_SEM.acquire()            # stop
 
-        if firsttime:
-            self.sql_cursor.execute('''insert into `Pages_linklist` 
-                    (`title`, `url`, `reftime`) values(?, ?, ?)''', 
-                    (link_title, link_addr, 1))
-        else:
-            self.sql_cursor.execute('''update `Pages_linklist` set `reftime`=`reftime`+1 where `url`=?''', 
-                (self.url,))
-
-        self.sql_conn.commit()
-
-        LINK_REF_ACCUM_SEM.release()            # resume
+    def extractAllLinks(self):
+        tags = self.soup.find_all('a')
+        links = []
+        for tag in tags:
+            try:
+                title = tag.text.replace('\n','').strip()
+                addr = tag.get('href').strip()
+                links.append((title,addr))
+            except AttributeError as e:
+                continue
+        
+        return links

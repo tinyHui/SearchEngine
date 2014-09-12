@@ -23,7 +23,7 @@ ANAYLIZER_THREAD_POOL_SIZE = 5
 REDOWNLOAD_TIME = 5
 URL_NEW_DOWNLOAD_TIMEOUT = 10
 URL_NEW_EXTRACT_TIMEOUT = 20
-LINK_REF_ACCUM_SEM = Semaphore(1)
+DATABASE_LOCK = Semaphore(1)
 
 HTTP_RESPONSE_ERROR = {
             204:"No Response", \
@@ -41,6 +41,7 @@ HTTP_RESPONSE_ERROR = {
             444:"No Response", \
             500:"Enternal Server Error", \
             502:"Bad Gateway", \
+            503:"Service Unavailable", \
             599:"Network Connect timeout Error" \
         }
 

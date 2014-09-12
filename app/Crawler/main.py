@@ -4,7 +4,7 @@ from BasicOperation import getBaseURL
 from HTMLAnaylizer.LinkExtractor import LinkExtractor
 
 if __name__ == '__main__':
-    start_url = "https://www.python.org/"
+    start_url = "https://tinyhui.github.io/"
     base_url = getBaseURL(start_url)
     
     # begin start multi threads
