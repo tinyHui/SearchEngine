@@ -47,7 +47,7 @@ class LinkExtractor(Thread):
             sublinks_num = 0
 
             for (title, addr)  in sublinks:
-                # full fill the link as a 
+                # full fill the link 
                 addr = genFullURL(self.base_url, addr)
                 # if link is not a valuable link
                 if addr is None:
